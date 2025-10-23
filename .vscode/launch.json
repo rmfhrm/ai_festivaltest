@@ -1,0 +1,21 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File (UTF-8)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                // ⭐️ 이 부분이 핵심입니다!
+                // 파이썬 입출력 인코딩을 UTF-8로 강제합니다.
+                "PYTHONIOENCODING": "utf-8"
+            }
+        }
+    ]
+}
