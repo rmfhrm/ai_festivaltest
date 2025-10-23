@@ -63,3 +63,4 @@ if __name__ == "__main__":
         
         print("\n--- [최근 5일간의 데이터] ---")
         print(trend_df.tail(5))
+        
