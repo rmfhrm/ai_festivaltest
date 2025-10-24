@@ -1,10 +1,7 @@
 import fitz  # PyMuPDF
 import os
 import openai
-from dotenv import load_dotenv  # 1. .env 라이브러리 import
-
-# --- ⭐️ 이 부분이 수정되었습니다! ---
-# 2. .env 파일에서 환경 변수를 불러옵니다.
+from dotenv import load_dotenv  
 load_dotenv() 
 
 # 3. os.getenv()를 사용해 환경 변수에서 API 키를 안전하게 가져옵니다.
@@ -42,7 +39,6 @@ else:
 
         # --- 2. AI에게 정보 추출 요청 ---
         
-        # AI의 역할을 정의 (시스템 프롬프트) - ⭐️ v3 업그레이드!
         system_prompt = """
         당신은 축제 기획서 분석 전문가입니다.
         사용자가 제공하는 기획서 텍스트를 분석하여,
