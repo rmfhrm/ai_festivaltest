@@ -77,7 +77,7 @@ try:
     cardnews_text_json = cardnews_generator.create_cardnews_text(
         USER_THEME, 
         pdf_data,                # PDF 요약본 (딕셔너리)
-        trend_keywords_list      # 트렌드 연관 키워드 (리스트)
+        trend_keywords_list,      # 트렌드 연관 키워드 (리스트)
         naver_buzzwords
     )
     final_response_to_frontend["cardnews_draft"] = cardnews_text_json

@@ -45,10 +45,10 @@ def get_dominant_colors(image_urls):
             hex_color = f"#{dominant_color_rgb[0]:02x}{dominant_color_rgb[1]:02x}{dominant_color_rgb[2]:02x}"
             palette.append(hex_color)
             
-            print(f"    ✅ 분석 성공. 주요 색상: {hex_color}")
+            print(f"    분석 성공. 주요 색상: {hex_color}")
             
         except Exception as e:
-            print(f"    ❌ 분석 실패: {url[:50]}... (오류: {e})")
+            print(f"    분석 실패: {url[:50]}... (오류: {e})")
             
     # 중복된 색상을 제거하고 리스트로 반환
     return list(set(palette))
@@ -71,7 +71,7 @@ def analyze_visual_trends(keyword):
     print("  2. 수집된 이미지에서 주요 색상 추출...")
     dominant_colors = get_dominant_colors(image_urls_to_analyze)
     
-    print(f"--- ✅ [시각 분석 모듈] 분석 완료 ---")
+    print(f"--- [시각 분석 모듈] 분석 완료 ---")
     
     # 이 모듈의 최종 결과물 (JSON으로 변환될 딕셔너리)
     return {
@@ -84,7 +84,7 @@ def analyze_visual_trends(keyword):
 # (다른 파일에서 'import'할 때는 이 부분은 실행되지 않습니다)
 if __name__ == "__main__":
     
-    print("--- 🚀 'visual_analyzer.py' 파일 단독 테스트 실행 ---")
+    print("--- 'visual_analyzer.py' 파일 단독 테스트 실행 ---")
     
     # '담양 산타 축제' 키워드가 들어왔다고 가정
     test_keyword = "담양 산타 축제" 

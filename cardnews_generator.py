@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
-    print("❌ [cardnews_generator] OPENAI_API_KEY를 찾을 수 없습니다.")
+    print(" [cardnews_generator] OPENAI_API_KEY를 찾을 수 없습니다.")
     exit()
 openai.api_key = api_key
 client = openai.OpenAI()
@@ -70,13 +70,13 @@ def create_cardnews_text(user_theme, pdf_data_dict, trends_keywords, naver_buzzw
         return json.loads(cardnews_json_string)
 
     except Exception as e:
-        print(f"    ❌ 카드뉴스 생성 중 오류 발생: {e}")
+        print(f" 카드뉴스 생성 중 오류 발생: {e}")
         return {"error": f"카드뉴스 생성 오류: {e}"}
 
 # --- (이 파일 자체를 테스트하기 위한 코드) ---
 if __name__ == "__main__":
     
-    print("--- 🚀 'cardnews_generator.py' 파일 단독 테스트 실행 ---")
+    print("--- 'cardnews_generator.py' 파일 단독 테스트 실행 ---")
     
     # (가짜 재료로 테스트)
     test_theme = "2030 연인들을 위한 로맨틱 축제"

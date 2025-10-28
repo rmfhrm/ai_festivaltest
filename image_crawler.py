@@ -32,8 +32,8 @@ def get_font_names_with_selenium():
 
     # ... (driver 설정 코드는 그대로 둠) ...
     
-    # ⭐️ 찾으려는 '주소'(CSS 선택자)를 변수로 만듭니다.
-    selector = "h1.specimen-header__title" # ⭐️ 하이픈(-)이 맞습니다!
+    # 찾으려는 '주소'(CSS 선택자)를 변수로 만듭니다.
+    selector = "h1.specimen-header__title" #  하이픈(-)이 맞습니다!
 
     try:
         # 3. 브라우저로 URL에 접속합니다.
@@ -53,16 +53,16 @@ def get_font_names_with_selenium():
         )
 
         title_text = font_title_element.text
-        print(f"✅ 성공: 찾은 요소의 텍스트는 '{title_text}' 입니다.")
+        print(f" 성공: 찾은 요소의 텍스트는 '{title_text}' 입니다.")
 
     except TimeoutException:
-        # ⭐️ 10초를 기다렸지만 '주소'를 못 찾았을 때 발생하는 오류 ⭐️
-        print(f"❌ 오류: 10초를 기다렸지만 '{selector}' 요소를 찾지 못했습니다.")
+        # 10초를 기다렸지만 '주소'를 못 찾았을 때 발생하는 오류 
+        print(f"오류: 10초를 기다렸지만 '{selector}' 요소를 찾지 못했습니다.")
         print("    웹사이트 구조가 변경되었을 수 있습니다.")
 
     except Exception as e:
-        # ⭐️ 그 외의 모든 오류 (인터넷 끊김 등) ⭐️
-        print(f"❌ Selenium으로 크롤링 중 예기치 못한 오류 발생: {e}")
+        #  그 외의 모든 오류 (인터넷 끊김 등) 
+        print(f" Selenium으로 크롤링 중 예기치 못한 오류 발생: {e}")
 
     finally:
         # 7. 작업이 끝나면 반드시 브라우저를 종료합니다.
