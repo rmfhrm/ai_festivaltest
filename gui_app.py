@@ -100,7 +100,7 @@ def select_file():
 
 # --- 3. GUI 윈도우 생성 ---
 root = tk.Tk()
-root.title("FestGen AI : 기획서 분석기 v1.0")
+root.title("ACC AI : 기획서 분석기 v1.0")
 root.geometry("700x800") # 창 크기
 
 # (프레임: 입력 영역)

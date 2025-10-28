@@ -7,27 +7,32 @@ import pandas as pd
 import json
 import requests
 from bs4 import BeautifulSoup
+import docx  # .docx 파일용
+import cloudconvert
 
-import docx  # .docx 
-import olefile # .hwp
-import hwp5
-
-# --- OpenAI API 키 설정 (이 모듈도 AI를 쓰니까) ---
+# --- API 키 설정 (OpenAI + CloudConvert) ---
 load_dotenv()
-api_key = os.getenv("OPENAI_API_KEY")
-if not api_key:
-    print("[analysis_tools] OPENAI_API_KEY를 찾을 수 없습니다.")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    print("[pdf_tools] OPENAI_API_KEY를 찾을 수 없습니다.")
 else:
-    openai.api_key = api_key
+    openai.api_key = OPENAI_API_KEY
 
+# 2. CloudConvert API 키 로드
+CLOUDCONVERT_API_KEY = os.getenv("CLOUDCONVERT_API_KEY")
+if not CLOUDCONVERT_API_KEY:
+    print("[pdf_tools] 경고: .env 파일에 CLOUDCONVERT_API_KEY가 없습니다.")
+    print("    (HWP 파일 변환이 불가능합니다)")
+else:
+    cloudconvert.configure(api_key=CLOUDCONVERT_API_KEY)
 # ----------------------------------------------------
-# 기능 1: 문서 분석기
-# ----------------------------------------------------
+
 def analyze_pdf(pdf_file_path):
     """
     PDF, DOCX, HWP 파일 경로를 받아서, AI로 요약한 JSON을 반환합니다.
+    (HWP는 CloudConvert API를 통해 PDF로 변환하여 처리)
     """
-    print(f"  [analysis_tools] 1. PDF 분석 시작: {pdf_file_path}")
+    print(f"  [pdf_tools] 1. 파일 분석 시작: {pdf_file_path}")
     
     full_text = ""
     if not os.path.exists(pdf_file_path):
@@ -35,11 +40,14 @@ def analyze_pdf(pdf_file_path):
         return {"error": "PDF 파일을 찾을 수 없습니다."}
 
     try:
-        print(f"파일 타입 감지 중...")
+        print(f"    - 파일 타입 감지 중...")
         file_extension = os.path.splitext(pdf_file_path)[1].lower()
 
+        # ---------------------------------
+        # PDF / DOCX 처리 
+        # ---------------------------------
         if file_extension == '.pdf':
-            print("PDF 파일 감지. PyMuPDF로 텍스트 추출...")
+            print("    - PDF 파일 감지. PyMuPDF로 텍스트 추출...")
             doc = fitz.open(pdf_file_path)
             for page_num in range(doc.page_count):
                 page = doc.load_page(page_num)
@@ -47,43 +55,98 @@ def analyze_pdf(pdf_file_path):
             doc.close()
         
         elif file_extension == '.docx':
-            print(" DOCX 파일 감지. python-docx로 텍스트 추출...")
+            print("    - DOCX 파일 감지. python-docx로 텍스트 추출...")
             doc = docx.Document(pdf_file_path)
             for para in doc.paragraphs:
                 full_text += para.text + "\n"
         
+        # ---------------------------------
+        # 3. HWP 처리 (CloudConvert API로 완전 교체)
+        # ---------------------------------
         elif file_extension == '.hwp':
-            print(" HWP 파일 감지. pyhwp/hwp5로 텍스트 추출...")
-            try:
-                # (HWP는 복잡해서 2가지 방식을 모두 시도)
-                
-                # 방식 1: HWP5 라이브러리 (최신 HWP)
-                from hwp5.hwp5txt import Hwp5Txt
-                h = Hwp5Txt(pdf_file_path)
-                full_text = h.get_text()
-                
-                if not full_text: # 텍스트 추출이 안 되면 방식 2 시도
-                    raise Exception("HWP5 파서가 텍스트를 반환하지 않음")
-                    
-            except Exception as hwp5_e:
-                print(f"    - HWP5 파서 실패 ({hwp5_e}). OLE 'PrvText' 스트림으로 재시도...")
-                try:
-                    # 방식 2: OLE '미리보기 텍스트' (구형 HWP)
-                    f = olefile.OleFileIO(pdf_file_path)
-                    encoded_text = f.openstream('PrvText').read()
-                    full_text = encoded_text.decode('euc-kr', errors='ignore')
-                except Exception as ole_e:
-                    print(f" HWP 파일 'PrvText' 스트림 읽기 실패: {ole_e}")
-                    return {"error": "HWP 파일 텍스트 추출에 실패했습니다. (지원되지 않는 HWP 버전일 수 있습니다)"}
+            print("    - HWP 파일 감지. CloudConvert API로 PDF 변환 시작...")
+
+            if not CLOUDCONVERT_API_KEY:
+                return {"error": "HWP 파일을 처리하려면 .env에 CLOUDCONVERT_API_KEY가 필요합니다."}
+
+            # (1) API 작업(Job) 생성: HWP -> PDF 변환
+            job = cloudconvert.Job.create(payload={
+                "tasks": {
+                    'upload-hwp': { 'operation': 'import/upload' },
+                    'convert-to-pdf': { 'operation': 'convert', 'input': 'upload-hwp', 'output_format': 'pdf', 'engine': 'office' },
+                    'export-pdf': { 'operation': 'export/url', 'input': 'convert-to-pdf', 'inline': True }
+                }
+            })
+
+            # (2) HWP 파일 업로드
+            upload_task = job['tasks'][0]
+            cloudconvert.Task.upload(file_name=pdf_file_path, task=upload_task)
+
+            # (3) 작업 완료 대기
+            print("    - (CloudConvert) HWP 파일 업로드 완료. PDF로 변환 중...")
+            job = cloudconvert.Job.wait(id=job['id'])
+
+            # (오류 상태 확인 강화)
+            if job.get("status") == "error":
+                error_message = job.get('message', '알 수 없는 오류')
+                for task in job.get("tasks", []):
+                    if task.get("status") == "error":
+                        error_message = f"Task '{task.get('name', 'unknown')}' failed: {task.get('message', 'No details')}"
+                        break
+                raise Exception(f"CloudConvert API 오류: {error_message}")
+
+            # (4) 변환된 PDF의 다운로드 URL 가져오기 (더 안전한 방식)
+            export_task = None
+            for task in job.get("tasks", []):
+                # 이름으로 'export-pdf' 작업을 찾음
+                if task.get("name") == "export-pdf":
+                    export_task = task
+                    break
+            
+            if not export_task:
+                 raise Exception("CloudConvert job result does not contain the 'export-pdf' task.")
+
+            if export_task.get("status") != "finished":
+                 raise Exception(f"CloudConvert 'export-pdf' task did not finish successfully. Status: {export_task.get('status')}")
+
+            result = export_task.get("result")
+            if not result or not result.get("files"):
+                 raise Exception("CloudConvert 'export-pdf' task result is missing or does not contain files.")
+
+            files = result.get("files")
+            if not files: # files 리스트가 비어있는지 확인
+                 raise Exception("CloudConvert 'export-pdf' task result contains an empty 'files' list.")
+
+            # '.get()'을 사용하여 'url' 키에 안전하게 접근
+            pdf_url = files[0].get('url') 
+            if not pdf_url:
+                 # 'url' 키가 없을 경우 명확한 오류 발생
+                 raise KeyError("The key 'url' was not found in the first file result of the 'export-pdf' task.")
+            
+            # (5) 변환된 PDF 데이터를 메모리로 다운로드
+            print("    - (CloudConvert) PDF 변환 완료. PDF 데이터 다운로드 중...")
+            pdf_response = requests.get(pdf_url)
+            pdf_response.raise_for_status()
+
+            # (6) 다운로드한 PDF 데이터를 'fitz'에게 전달
+            print("    - (CloudConvert) PDF 데이터 분석 시작...")
+            doc = fitz.open(stream=pdf_response.content, filetype="pdf")
+            for page_num in range(doc.page_count):
+                page = doc.load_page(page_num)
+                full_text += page.get_text("text")
+            doc.close()
+        # --- ⭐️ HWP 처리 (디버깅 버전) 끝 ⭐️ ---
+        # ---------------------------------
         
         else:
             print(f"지원하지 않는 파일 형식입니다: {file_extension}")
             return {"error": f"지원하지 않는 파일 형식: {file_extension}. (PDF, DOCX, HWP만 지원)"}
 
+        print(f"    - 텍스트 추출 완료. (총 {len(full_text)}자)")
 
-        print(f" 텍스트 추출 완료. (총 {len(full_text)}자)")
-
-        # 2. AI에게 요약 요청 
+        # ---------------------------------
+        # AI 요약 요청 (기존과 동일)
+        # ---------------------------------
         system_prompt = """
         당신은 축제 기획서 분석 전문가입니다.
         사용자가 제공하는 기획서 텍스트를 분석하여,
@@ -126,7 +189,7 @@ def analyze_pdf(pdf_file_path):
 
         client = openai.OpenAI()
         response = client.chat.completions.create(
-            model="gpt-4-turbo",
+            model="gpt-4-turbo",  # (테스트 결과 gpt-3.5-turbo보다 gpt-4-turbo가 훨씬 안정적입니다)
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
